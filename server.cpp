@@ -4,14 +4,11 @@
 #include <cstring>
 
 #include "server.hpp"
-
-SessionNode::SessionNode(const Session &sess)
-	: sess(sess)
-{  }
+#include "utils.hpp"
 
 Server::Server(long port, int max_players) 
 	: ls(socket(AF_INET, SOCK_STREAM, 0)), max_players(max_players), 
-	started(false), sess_list(0)
+	started(false), sess_list(0), game(max_players)
 {
 	Init(port);
 }
@@ -45,14 +42,16 @@ void Server::Run()
     int sr, maxfd;
 	bool ssr;
     while(true) {  
+		CheckState();
+
         FD_ZERO(&readfds);       
         FD_SET(ls, &readfds);
         maxfd = ls;
-        for(SessionNode *sess_node = sess_list; sess_node; 
+        for(Node<Session> *sess_node = sess_list; sess_node; 
 				sess_node = sess_node->next) {
-			FD_SET(sess_node->sess.GetFd(), &readfds);
-			if(sess_node->sess.GetFd() > maxfd)
-				maxfd = sess_node->sess.GetFd();
+			FD_SET(sess_node->data.GetFd(), &readfds);
+			if(sess_node->data.GetFd() > maxfd)
+				maxfd = sess_node->data.GetFd();
         }
 
         sr = select(maxfd+1, &readfds, NULL, NULL, NULL);
@@ -64,10 +63,10 @@ void Server::Run()
         if(FD_ISSET(ls, &readfds))
 			AcceptClient();
 										
-		SessionNode *sess_node = sess_list, *tmp;
+		Node<Session> *sess_node = sess_list, *tmp;
         while(sess_node) {
-            if(FD_ISSET(sess_node->sess.GetFd(), &readfds)) {
-                ssr = sess_node->sess.DoRead(sess_list);
+            if(FD_ISSET(sess_node->data.GetFd(), &readfds)) {
+                ssr = sess_node->data.DoRead(sess_list, game);
                 if(!ssr)
 				{
 					tmp = sess_node->next;
@@ -78,8 +77,6 @@ void Server::Run()
             }
 			sess_node = sess_node->next;
         }
-
-		CheckState();
     }
 }
 
@@ -94,46 +91,26 @@ void Server::AcceptClient()
         perror("accept");
         return;
     }
+
 	Session *sess = new Session(sd, &addr);
-
-	SessionNode *sess_node = new SessionNode(*sess);
-	if(!sess_list) {
-		sess_list = sess_node;
-	}
-	else {
-		SessionNode *last = sess_list;
-		for(; last->next; last = last->next) 
-		{  }
-
-		last->next = sess_node;
-	}
-
+	Node<Session>::Append(*sess, sess_list);
 }
 
 int Server::PlayerCount()
 {
-	SessionNode *node = sess_list;
+	Node<Session> *node = sess_list;
 	int i = 0;
-	while(node)
-	{
-		i++;
+	while(node) {
+		if(node->data.IsReady())
+			i++;
 		node = node->next;
 	}
 	return i;
 }
 
-void Server::CloseSession(SessionNode *sess_node)
+void Server::CloseSession(Node<Session> *sess_node)
 {
-	if(sess_list == sess_node)
-		sess_list = sess_node->next;
-	else {
-		SessionNode *tmp = sess_list;
-		while(sess_node != tmp->next)
-			tmp = tmp->next; 
-		tmp->next = sess_node->next;
-	}
-	
-	delete sess_node;
+	Node<Session>::Remove(sess_node, sess_list);
 }
 
 void Server::CheckState()
@@ -144,16 +121,19 @@ void Server::CheckState()
 
 void Server::StartGame()
 {
-	for(SessionNode *sess_node = sess_list; sess_node; 
-			sess_node = sess_node->next)
-		sess_node->sess.Start();
+	int i = 1;
+	for(Node<Session> *sess_node = sess_list; sess_node; 
+			sess_node = sess_node->next, i++) {
+		sess_node->data.Start();
+		sess_node->data.GetPlayer().SetNum(i);
+	}
 
-	sess_list->sess.TakeTurn();
+	sess_list->data.TakeTurn();
 	started = true;
 }
 
 Session::Session(int fd, struct sockaddr_in *from) 
-	: state(waiting_start), fd(fd), from_ip(htonl(from->sin_addr.s_addr)), 
+	: state(typing_name), fd(fd), from_ip(htonl(from->sin_addr.s_addr)), 
 	from_port(htons(from->sin_port)), buf_used(0)
 {
 	SendMessage("Type your name: ");
@@ -164,7 +144,7 @@ void Session::SendMessage(const char *str) const
 	write(fd, str, strlen(str));
 }
 
-bool Session::DoRead(SessionNode *sess_list)
+bool Session::DoRead(Node<Session> *sess_list, Bank& game)
 {
 	int rc, bufp = buf_used;
 	rc = read(fd, buf + bufp, buf_size - bufp);
@@ -173,7 +153,7 @@ bool Session::DoRead(SessionNode *sess_list)
 	}
 
 	buf_used = rc;
-	CheckLf(sess_list);
+	CheckLf(sess_list, game);
 	
 	return true;
 }
@@ -181,10 +161,10 @@ bool Session::DoRead(SessionNode *sess_list)
 void Session::Start()
 {
 	state = waiting_turn;
-	SendMessage("Game started.\n");
+	SendMessage("Bank started.\n");
 }
 
-void Session::CheckLf(SessionNode *sess_list)
+void Session::CheckLf(Node<Session> *sess_list, Bank& game)
 {
     int pos = -1;
     char *line;
@@ -204,34 +184,209 @@ void Session::CheckLf(SessionNode *sess_list)
 
     if(line[pos-1] == '\r') line[pos-1] = 0;
 
-	FsmStep(line, sess_list);
+	FsmStep(line, sess_list, game);
 }
 
-void Session::FsmStep(char *line, SessionNode *sess_list)
+void Session::FsmStep(char *line, Node<Session> *sess_list, Bank& game)
 {
 	switch(state) {
+		case typing_name:
+			GetPlayer().SetName(line);
+			state = waiting_start;
+			break;
 		case waiting_start:
-			SendMessage("Game is not started\n");
+			SendMessage("Bank is not started\n");
 			break;
 		case waiting_turn:
-			SendMessage("It's not your turn now\n");
+			HandleCommand(line, sess_list, game);
 			break;
 		case turn:
-			SendMessage("Your turn\n");
-			GiveTurn(sess_list);
+			HandleCommand(line, sess_list, game, true);
 			break;
 	}
 }
 
-void Session::GiveTurn(SessionNode *sess_list)
+// market, player, prod, buy, sell, build, turn, help
+
+void Session::HandleCommand(char *line, Node<Session> *sess_list, Bank& game, bool turn)
+{
+	int argc;
+	char **argv = split_line(line, argc);
+	if(!argv)
+		return;
+	
+	if(!strcmp(argv[0], "market")) {
+		MarketHandler(game, sess_list);
+	}
+	else if(!strcmp(argv[0], "player")) {
+		PlayerHandler(argv, argc, sess_list);
+	}
+	else if(!strcmp(argv[0], "prod") && HasTurn()) {
+		ProdHandler(argv, argc);
+	}
+	else if(!strcmp(argv[0], "buy") && HasTurn()) {
+		BuyHandler(argv, argc, game);
+	}
+	else if(!strcmp(argv[0], "sell") && HasTurn()) {
+		SellHandler(argv, argc, game);
+	}
+	else if(!strcmp(argv[0], "build") && HasTurn())
+		BuildHandler();
+	else if(!strcmp(argv[0], "turn") && HasTurn())
+		TurnHandler(sess_list, game);
+}
+
+void Session::MarketHandler(const Bank& game, Node<Session> *sess_list)
+{
+	const char *info = game.GetMarketInfo(Node<Session>::Len(sess_list));
+	SendMessage(info);
+	delete info;
+}
+
+void Session::PlayerHandler(char **argv, int argc, Node<Session> *sess_list)
+{
+	bool ok;
+	int num;
+	if(argc != 2)
+	{
+		SendMessage("Usage: player <int:num>\n");
+		return;
+	}
+	
+	ok = str_to_int(argv[1], num);
+	if(!ok) {
+		SendMessage("Invalid player num\n");
+		return;
+	}
+
+	Node<Session> *node = sess_list;
+	while(node && node->data.GetPlayer().GetNum() != num) {
+		node = node->next;
+	}
+
+	if(node)
+	{
+		const char *info = node->data.GetPlayer().GetInfo();
+		SendMessage(info);
+		delete info;
+	}
+	else
+		SendMessage("Player num doesn't exist.\n");
+}
+
+void Session::ProdHandler(char **argv, int argc)
+{
+	bool ok;
+	int num;
+
+	if(argc != 2)
+	{
+		SendMessage("Usage: prod <int:num>\n");
+		return;
+	}
+	
+	ok = str_to_int(argv[1], num);
+	if(!ok) {
+		SendMessage("Invalid product count\n");
+		return;
+	}
+
+	prod_results res = GetPlayer().CreateProduct(num);
+	switch(res) {
+		case no_resources_err:
+			SendMessage("Not enough resources for creating\n");
+			break;
+		case no_factories_err:
+			SendMessage("Not enough factories for creating\n");
+			break;
+		case success_prod:
+			SendMessage("Production was successful\n");
+			break;
+	}
+}
+
+void Session::BuyHandler(char **argv, int argc, Bank& bank)
+{
+	PlaceBet(argv, argc, bank, material);
+}
+
+void Session::SellHandler(char **argv, int argc, Bank& bank)
+{
+	PlaceBet(argv, argc, bank, product);
+}
+
+void Session::BuildHandler()
+{
+	bool ok = GetPlayer().BuildFactory();
+	if(!ok)
+		SendMessage("Not enough money\n");
+}
+
+void Session::PlaceBet(char **argv, int argc, Bank& bank, bet_types type)
+{
+	bool ok;
+	int value, count;
+	if(argc != 3)
+	{
+		SendMessage("Usage: bet <int:count> <int:value>\n");
+		return;
+	}
+	
+	ok = str_to_int(argv[1], count);
+	if(!ok) {
+		SendMessage("Invalid count\n");
+		return;
+	}
+
+	ok = str_to_int(argv[2], value);
+	if(!ok) {
+		SendMessage("Invalid vaule count\n");
+		return;
+	}
+
+	bet_results res = GetPlayer().PlaceBet(bank, value, count, type);
+	char buf[32];
+	switch(res)
+	{
+		case max_price_err:
+			sprintf(buf, "Max selling price is %d\n", bank.GetProductMax());
+			SendMessage(buf);
+			break;
+		case min_price_err:
+			sprintf(buf, "Min buying price is %d\n", bank.GetMaterialMin());
+			SendMessage(buf);
+			break;
+		case no_money_err:
+			SendMessage("Not enough money for buying\n");
+			break;
+		case no_product_err:
+			SendMessage("Not enough products for selling\n");
+			break;
+		case success_bet:
+			SendMessage("Bet is placed\n");
+			break;
+	}
+}
+
+void Session::TurnHandler(Node<Session> *sess_list, Bank& game)
+{
+	GiveTurn(sess_list, game);
+}
+
+void Session::GiveTurn(Node<Session> *sess_list, Bank& game)
 {
 	state = waiting_turn;
-	SessionNode *tmp = sess_list;
-	while(!tmp || &tmp->sess != this) { 
+	Node<Session> *tmp = sess_list;
+	while(!tmp || &tmp->data != this) { 
 		tmp = tmp->next; 
 	}
-	tmp = (tmp->next) ? tmp->next : sess_list;
-	tmp->sess.TakeTurn();
+	tmp->data.GetPlayer().Update();
+	if(tmp->next)
+		tmp->next->data.TakeTurn();
+	else {
+		sess_list->data.TakeTurn();
+		game.FinishMonth(Node<Session>::Len(sess_list));
+	}
 }
 
 void Session::TakeTurn()
@@ -243,3 +398,4 @@ Session::~Session()
 {
 	close(fd);
 }
+

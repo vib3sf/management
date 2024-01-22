@@ -2,14 +2,13 @@
 #define SERVER_HPP
 
 #include <netinet/in.h>
-#include "player.hpp"
-
-struct SessionNode;
+#include "utils.hpp"
+#include "game.hpp"
 
 class Session {
 	private:
 		enum fsm_states {
-			waiting_start, waiting_turn, turn
+			typing_name, waiting_start, waiting_turn, turn
 		} state;
 
 		static const int buf_size = 1024;
@@ -23,24 +22,34 @@ class Session {
 		Player player;
 
 		inline void SendMessage(const char *str) const;
-		void CheckLf(SessionNode *sess_list);
-		void FsmStep(char *line, SessionNode *sess_list);
-		void GiveTurn(SessionNode *sess_list);
+		void CheckLf(Node<Session> *sess_list, Bank& game);
+		void FsmStep(char *line, Node<Session> *sess_list, Bank& game);
+		void HandleCommand(char *line, Node<Session> *sess_list, 
+				Bank& game, bool turn=false);
+		void HandleCommand(char *line);
+		char **SplitLine(char *line);
+		void MakeBuf(char *buf, int& buf_size, int& cur_size);
+		void GiveTurn(Node<Session> *sess_list, Bank& game);
 
 	public:
 		Session(int fd, struct sockaddr_in *from);
-		bool DoRead(SessionNode *sess_list);
+		bool DoRead(Node<Session> *sess_list, Bank& game);
 		inline void Start();
-		inline int GetFd() { return fd; };
+		inline int GetFd() const { return fd; };
 		inline void TakeTurn();
+		inline bool IsReady() const { return state == waiting_start; };
+		inline bool HasTurn() const { return state == turn; }
+		inline Player& GetPlayer() { return player; };
+
+		void MarketHandler(const Bank& game, Node<Session> *sess_list);
+		void PlayerHandler(char **argv, int argc, Node<Session> *sess_list);
+		void ProdHandler(char **argv, int argc);
+		void PlaceBet(char **argv, int argc, Bank& bank, bet_types type);
+		void BuyHandler(char **argv, int argc, Bank& bank);
+		void SellHandler(char **argv, int argc, Bank& bank);
+		void BuildHandler();
+		void TurnHandler(Node<Session> *sess_list, Bank& game);
 		~Session();
-};
-
-struct SessionNode {
-	Session sess;
-	SessionNode *next;
-
-	SessionNode(const Session &sess);
 };
 
 class Server {
@@ -48,14 +57,15 @@ class Server {
 		static const int listen_qlen = 16;
 		int ls, max_players;
 		bool started;
-		SessionNode *sess_list;
+		Node<Session> *sess_list;
+		Bank game;
 
 		void Init(long port);
 		void CheckState();
 		void StartGame();
 		void AcceptClient();
 		int PlayerCount();
-		void CloseSession(SessionNode *sess_node);
+		void CloseSession(Node<Session> *sess_node);
 
 	public:
 		Server(long port, int max_players);
