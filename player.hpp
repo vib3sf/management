@@ -2,6 +2,31 @@
 #define PLAYER_HPP
 
 #include "bank.hpp"
+#include "utils.hpp"
+
+class Factory {
+	private:
+		int build_time;
+		bool is_used, is_opened;
+		
+	public:
+		Factory(int build_time) : 
+			build_time(build_time), is_used(false), is_opened(false) {  }
+
+		inline bool IsUsed() { return is_used; }
+		inline void Block() { is_used = true; }
+		inline void Unblock() { is_used = false; }
+		inline void DecreaseBuildTime() { build_time--; }
+		inline bool IsBuilt() { return build_time == 0; }
+		inline bool IsOpened() { return is_opened; }
+		inline void Open() { is_opened = true; }
+
+		static inline int FreeFactsCount(Node<Factory> *facts) 
+		{
+			return facts ? FreeFactsCount(facts->next) + 
+				facts->data.is_opened : 0; 
+		}
+};
 
 enum bet_results { 
 	success_bet, min_price_err, max_price_err, no_money_err, no_product_err};
@@ -14,12 +39,11 @@ class Player {
 		static const char *player_msg; 
 
 		char *name;
-		int num, money, factories, fact_used, materials, products;
+		int num, money, materials, products;
+		Node<Factory> *factories;
 		
 	public:
-		Player() 
-			: name(0), money(10000), factories(2), fact_used(0), 
-			materials(4), products(2) {  }
+		Player();
 
 		bool BuildFactory();
 		prod_results CreateProduct(int count);
@@ -35,7 +59,7 @@ class Player {
 			this->name = new char[strlen(name) + 1];
 			strcpy(this->name, name); 
 		}
-		void Update();
+		void UpdateFactories();
 };
 
 #endif

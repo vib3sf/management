@@ -167,7 +167,7 @@ void Controller::TurnHandler()
 	while(tmp && &tmp->data != session) { 
 		tmp = tmp->next; 
 	}
-	tmp->data.GetPlayer().Update();
+	tmp->data.GetPlayer().UpdateFactories();
 	if(tmp->next)
 		tmp->next->data.TakeTurn();
 	else {

@@ -2,27 +2,57 @@
 
 #include "stdio.h"
 
+Player::Player() 
+	: name(0), money(10000), materials(4), products(2), factories(0)
+{  
+	for(int i = 0; i < 2; i++) {
+		Factory fact(0);
+		fact.Open();
+		Node<Factory>::Append(fact, factories);
+	}
+}
+
 bool Player::BuildFactory()
 {
-	if(money < 5000)
+	if(money < 2500)
 		return false;
 
-	money -= 5000;
-	factories++;
+	money -= 2500;
+	Factory fact(5);
+	Node<Factory>::Append(fact, factories);
 	return true;
 }
 
 prod_results Player::CreateProduct(int count)
 {
-	if(fact_used + count > factories)
-		return no_factories_err;
 	if(money < 2000 * count || materials < count)
 		return no_resources_err;
 	
+	Factory **facts = new Factory*[count];
+	int free_facts = 0;
+	for(Node<Factory> *node = factories; node; node = node->next) {
+		Factory& fact = node->data;
+		if(!fact.IsUsed()) {
+			facts[free_facts] = &fact;
+			free_facts++;
+
+			if(free_facts == count)
+				break;
+		}
+	}
+
+	if(count != free_facts) {
+		delete[] facts;
+		return no_factories_err;
+	}
+
 	money -= 2000 * count;
-	fact_used += count;
 	materials -= count;
 	products += count;
+	for(int i = 0; i < count; i++)
+		facts[i]->Block();
+
+	delete[] facts;
 	return success_prod;
 }
 
@@ -59,12 +89,21 @@ const char *Player::GetInfo() const
 	char *buf = new char[128];
 	sprintf(buf, player_msg,
 			num, name, 
-			money, factories, materials, products);
+			money, Factory::FreeFactsCount(factories), materials, products);
 	return buf;
 }
 
-void Player::Update()
+void Player::UpdateFactories()
 {
-	fact_used = 0;
+	for(Node<Factory> *node = factories; node; node = node->next) {
+		Factory& fact = node->data;
+		fact.Unblock();
+		if(!fact.IsBuilt())
+			fact.DecreaseBuildTime();
+		else if(!fact.IsOpened() && money >= 2500) {
+			fact.Open();
+			money -= 2500;
+		}
+	}
 }
 
