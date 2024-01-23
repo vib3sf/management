@@ -5,6 +5,13 @@
 #include "utils.hpp"
 #include "bank.hpp"
 
+struct Handler
+{
+	const char *name;
+	void (Controller::*method)();
+	bool turn;
+};
+
 class Controller
 {
 	private:
@@ -22,6 +29,8 @@ class Controller
 		void SellHandler();
 		void BuildHandler();
 		void TurnHandler();
+
+		static const Handler handlers[];
 
 	public:
 		Controller(Node<Session> *&sess_list, int players)

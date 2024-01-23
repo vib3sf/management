@@ -3,6 +3,17 @@
 #include "stdio.h"
 #include "stdlib.h"
 
+const Handler Controller::handlers[] = {
+	{ "market",	&Controller::MarketHandler, false 	},
+	{ "player", &Controller::PlayerHandler, false	},
+	{ "prod", 	&Controller::ProdHandler,	true	},
+	{ "buy", 	&Controller::BuyHandler,	true  	},
+	{ "sell", 	&Controller::SellHandler,	true	},
+	{ "build", 	&Controller::BuildHandler, 	true	},
+	{ "turn", 	&Controller::TurnHandler, 	true	},
+	0
+};
+
 void Controller::Handle(char *line, Session& session)
 {
 	argv = split_line(line, argc);
@@ -10,22 +21,15 @@ void Controller::Handle(char *line, Session& session)
 
 	if(!argv)
 		return;
-	
-	if(!strcmp(argv[0], "market"))
-		MarketHandler();
-	else if(!strcmp(argv[0], "player"))
-		PlayerHandler();
-	else if(!strcmp(argv[0], "prod") && this->session->HasTurn())
-		ProdHandler();
-	else if(!strcmp(argv[0], "buy") && this->session->HasTurn())
-		BuyHandler();
-	else if(!strcmp(argv[0], "sell") && this->session->HasTurn())
-		SellHandler();
-	else if(!strcmp(argv[0], "build") && this->session->HasTurn())
-		BuildHandler();
-	else if(!strcmp(argv[0], "turn") && this->session->HasTurn())
-		TurnHandler();
 
+	for(const Handler *h = handlers; h->name; h++)
+		if(!strcmp(line, h->name)) {
+			if(!session.HasTurn() && h->turn)
+				session.SendMessage("It is not your turn\n");
+			else
+				((*this).*(h->method))();
+			break;
+		}
 }
 
 void Controller::MarketHandler()
@@ -53,8 +57,6 @@ void Controller::PlayerHandler()
 
 	Node<Session> *node = sess_list;
 	while(node && node->data.GetPlayer().GetNum() != num) {
-		node = node->next;
-	}
 
 	if(node)
 	{
