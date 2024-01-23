@@ -20,4 +20,4 @@ deps.mk: $(SRC)
 	$(CC) -MM $^ > $@
 
 clean:
-	rm server
+	rm server deps.mk *.o
