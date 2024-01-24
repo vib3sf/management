@@ -22,6 +22,7 @@ class Controller
 		Bank bank;
 
 		void MarketHandler();
+		void InfoHandler();
 		void PlayerHandler();
 		void ProdHandler();
 		void PlaceBet(bet_types type);

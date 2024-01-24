@@ -5,6 +5,7 @@
 
 const Handler Controller::handlers[] = {
 	{ "market",	&Controller::MarketHandler, false 	},
+	{ "info", 	&Controller::InfoHandler, 	false	},
 	{ "player", &Controller::PlayerHandler, false	},
 	{ "prod", 	&Controller::ProdHandler,	true	},
 	{ "buy", 	&Controller::BuyHandler,	true  	},
@@ -40,6 +41,13 @@ void Controller::MarketHandler()
 	delete info;
 }
 
+void Controller::InfoHandler()
+{
+	const char *info = session->GetPlayer().GetInfo();
+	session->SendMessage(info);
+	delete info;
+}
+
 void Controller::PlayerHandler()
 {
 	int num;
@@ -48,9 +56,8 @@ void Controller::PlayerHandler()
 		return;
 
 	Node<Session> *node = sess_list;
-	while(node && node->data.GetPlayer().GetNum() != num) {
+	while(node && node->data.GetPlayer().GetNum() != num)
 		node = node->next;
-	}
 
 	if(node)
 	{
