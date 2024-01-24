@@ -50,13 +50,14 @@ void Controller::InfoHandler()
 
 void Controller::PlayerHandler()
 {
-	int num;
-	if(!(ArgcCheck("Usage: player <int:num>\n", 2) && 
-			NumCheck("Invalid player num\n", 1, num)))
+	if(!ArgcCheck("Usage: player <int:num>\n", 2)) 
 		return;
 
+	int num = str_to_int(argv[1], num);
 	Node<Session> *node = sess_list;
-	while(node && node->data.GetPlayer().GetNum() != num)
+	const Player& player = node->data.GetPlayer(); 
+
+	while(node && player.GetNum() != num && strcmp(argv[1], player.GetName()))
 		node = node->next;
 
 	if(node)

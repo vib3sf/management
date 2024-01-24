@@ -54,6 +54,7 @@ class Player {
 		const char *GetInfo() const;
 		inline int GetNum() const { return num; }
 		inline void SetNum(int num) { this->num = num; }
+		inline const char *GetName() const { return name; }
 		inline void SetName(char *name) 
 		{ 
 			this->name = new char[strlen(name) + 1];
