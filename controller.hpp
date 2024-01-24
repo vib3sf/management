@@ -32,6 +32,9 @@ class Controller
 
 		static const Handler handlers[];
 
+		bool ArgcCheck(const char *err_msg, int right);
+		bool NumCheck(const char *err_msg, int i, int& num);
+
 	public:
 		Controller(Node<Session> *&sess_list, int players)
 			: sess_list(sess_list), bank(players) {  }

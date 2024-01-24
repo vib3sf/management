@@ -28,8 +28,9 @@ void Controller::Handle(char *line, Session& session)
 				session.SendMessage("It is not your turn\n");
 			else
 				((*this).*(h->method))();
-			break;
+			return;
 		}
+	session.SendMessage("Wrong command\n");
 }
 
 void Controller::MarketHandler()
@@ -41,22 +42,15 @@ void Controller::MarketHandler()
 
 void Controller::PlayerHandler()
 {
-	bool ok;
 	int num;
-	if(argc != 2)
-	{
-		session->SendMessage("Usage: player <int:num>\n");
+	if(!(ArgcCheck("Usage: player <int:num>\n", 2) && 
+			NumCheck("Invalid player num\n", 1, num)))
 		return;
-	}
-	
-	ok = str_to_int(argv[1], num);
-	if(!ok) {
-		session->SendMessage("Invalid player num\n");
-		return;
-	}
 
 	Node<Session> *node = sess_list;
 	while(node && node->data.GetPlayer().GetNum() != num) {
+		node = node->next;
+	}
 
 	if(node)
 	{
@@ -70,20 +64,10 @@ void Controller::PlayerHandler()
 
 void Controller::ProdHandler()
 {
-	bool ok;
 	int num;
-
-	if(argc != 2)
-	{
-		session->SendMessage("Usage: prod <int:num>\n");
+	if(!(ArgcCheck("Usage: prod <int:num>\n", 2) && 
+			NumCheck("Invalid product count\n", 1, num)))
 		return;
-	}
-	
-	ok = str_to_int(argv[1], num);
-	if(!ok) {
-		session->SendMessage("Invalid product count\n");
-		return;
-	}
 
 	prod_results res = session->GetPlayer().CreateProduct(num);
 	switch(res) {
@@ -111,25 +95,12 @@ void Controller::SellHandler()
 
 void Controller::PlaceBet(bet_types type)
 {
-	bool ok;
 	int value, count;
-	if(argc != 3)
-	{
-		session->SendMessage("Usage: bet <int:count> <int:value>\n");
-		return;
-	}
-	
-	ok = str_to_int(argv[1], count);
-	if(!ok) {
-		session->SendMessage("Invalid count\n");
-		return;
-	}
 
-	ok = str_to_int(argv[2], value);
-	if(!ok) {
-		session->SendMessage("Invalid vaule count\n");
+	if(!(ArgcCheck("Usage: bet <int:count> <int:value>\n", 3) && 
+			NumCheck("Invalid count\n", 1, count) &&
+			NumCheck("Invalid value count\n", 2, value)))
 		return;
-	}
 
 	bet_results res = session->GetPlayer().PlaceBet(bank, value, count, type);
 	char buf[32];
@@ -176,4 +147,23 @@ void Controller::TurnHandler()
 		sess_list->data.TakeTurn();
 		bank.FinishMonth(Node<Session>::Len(sess_list));
 	}
+}
+
+bool Controller::ArgcCheck(const char *err_msg, int right)
+{
+	if(argc != right)
+	{
+		session->SendMessage(err_msg);
+		return false;
+	}
+	return true;
+}
+
+bool Controller::NumCheck(const char *err_msg, int i, int& num)
+{
+	if(!str_to_int(argv[i], num)) {
+		session->SendMessage(err_msg);
+		return false;
+	}
+	return true;
 }
