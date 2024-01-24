@@ -3,6 +3,7 @@
 
 #include "bank.hpp"
 #include "utils.hpp"
+#include "stdio.h"
 
 class Factory {
 	private:
@@ -51,7 +52,6 @@ class Player {
 		void AddMaterial(int materials) { this->materials += materials; }
 		void ReduceProduct(int products) { this->products -= products; }
 		bet_results PlaceBet(Bank& bank, int value, int count, bet_types type);
-		const char *GetInfo() const;
 		inline int GetNum() const { return num; }
 		inline void SetNum(int num) { this->num = num; }
 		inline const char *GetName() const { return name; }
@@ -61,6 +61,14 @@ class Player {
 			strcpy(this->name, name); 
 		}
 		void UpdateFactories();
+		
+		inline void GetInfo(char *buf) const
+		{
+			sprintf(buf, player_msg,
+				num, name, 
+				money, Factory::FreeFactsCount(factories), 
+				materials, products);
+		}
 };
 
 #endif

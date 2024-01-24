@@ -2,6 +2,10 @@
 
 #include "stdio.h"
 
+const char *Player::player_msg = 
+	"#%d - %s: money  facts  mats  prod\n"
+	"%%%15d  %3d%7d%6d\n";
+
 Player::Player() 
 	: name(0), money(10000), materials(4), products(2), factories(0)
 {  
@@ -78,19 +82,6 @@ bet_results Player::PlaceBet(Bank& bank, int value, int count, bet_types type)
 	}
 
 	return success_bet;
-}
-
-const char *Player::player_msg = 
-	"#%d - %s: money  facts  mats  prod\n"
-	"%%%15d  %3d%7d%6d\n";
-
-const char *Player::GetInfo() const
-{
-	char *buf = new char[128];
-	sprintf(buf, player_msg,
-			num, name, 
-			money, Factory::FreeFactsCount(factories), materials, products);
-	return buf;
 }
 
 void Player::UpdateFactories()

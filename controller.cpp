@@ -36,16 +36,16 @@ void Controller::Handle(char *line, Session& session)
 
 void Controller::MarketHandler()
 {
-	const char *info = bank.GetMarketInfo(Node<Session>::Len(sess_list));
+	char info[256];
+	bank.GetMarketInfo(Node<Session>::Len(sess_list), info);
 	session->SendMessage(info);
-	delete info;
 }
 
 void Controller::InfoHandler()
 {
-	const char *info = session->GetPlayer().GetInfo();
+	char info[128];
+	session->GetPlayer().GetInfo(info);
 	session->SendMessage(info);
-	delete info;
 }
 
 void Controller::PlayerHandler()
@@ -62,9 +62,9 @@ void Controller::PlayerHandler()
 
 	if(node)
 	{
-		const char *info = node->data.GetPlayer().GetInfo();
+		char info[128];
+		node->data.GetPlayer().GetInfo(info);
 		session->SendMessage(info);
-		delete info;
 	}
 	else
 		session->SendMessage("Player num doesn't exist.\n");

@@ -3,6 +3,7 @@
 
 #include "string.h"
 #include "utils.hpp"
+#include "stdio.h"
 
 class Player;
 
@@ -84,17 +85,33 @@ class Bank {
 
 		Node<Bet&> *GetWinningBets();
 
-		const char *GetMarketInfo(int players) const;
 		void FinishMonth(int players);
 		void UpdateMarket();
 
 		void AddProductBet(ProductBet bet);
 		void AddMaterialBet(MaterialBet bet);
 
-		inline int GetProductMax() const { return 7000 - level * 500; }
-		inline int GetProductCount() const { return 0.5 * (level + 1) * traders; }
-		inline int GetMaterialMin() const { return 925 - level * 125; }
-		inline int GetMaterialCount() const { return 0.5 * (7 - level) * traders; }
+		inline int GetProductMax() const 
+		{ return 7000 - level * 500; }
+
+		inline int GetProductCount() const 
+		{ return 0.5 * (level + 1) * traders; }
+
+		inline int GetMaterialMin() const 
+		{ return 925 - level * 125; }
+
+		inline int GetMaterialCount() const 
+		{ return 0.5 * (7 - level) * traders; }
+
+		inline void GetMarketInfo(int players, char *buf) const
+		{
+			sprintf(buf, market_msg, 
+				month,
+				players,
+				GetMaterialCount(), GetMaterialMin(),
+				GetProductCount(), GetProductMax());
+		}
+
 };
 
 #endif

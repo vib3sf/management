@@ -36,11 +36,7 @@ class Session {
 			state = turn; 
 			SendMessage("Your turn now\n"); 
 		};
-		inline void LoseTurn() 
-		{ 
-			state = waiting_turn; 
-			SendMessage("Turn ended\n");
-		}
+		inline void LoseTurn() { state = waiting_turn; }
 
 		inline int GetFd() const { return fd; };
 		inline bool IsReady() const { return state == waiting_start; };

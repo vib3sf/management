@@ -135,14 +135,3 @@ const char *Bank::market_msg =
 	"Bank buys:  items  max.price\n"
 	"%%%12d%10d\n";
 
-const char *Bank::GetMarketInfo(int players) const 
-{
-	char *buf = new char[512];
-	sprintf(buf, market_msg, 
-			month,
-			players,
-			GetMaterialCount(), GetMaterialMin(),
-			GetProductCount(), GetProductMax());
-	return buf;
-}
-
