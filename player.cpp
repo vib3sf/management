@@ -100,7 +100,7 @@ void Player::UpdateFactories()
 		fact.Unblock();
 		if(!fact.IsBuilt())
 			fact.DecreaseBuildTime();
-		else if(!fact.IsOpened() && money >= 2500) {
+		else if(!fact.IsOpen() && money >= 2500) {
 			fact.Open();
 			money -= 2500;
 		}

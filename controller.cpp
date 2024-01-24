@@ -135,19 +135,18 @@ void Controller::PlaceBet(bet_types type)
 
 void Controller::BuildHandler()
 {
-	bool ok = session->GetPlayer().BuildFactory();
-	if(!ok)
-		session->SendMessage("Not enough money\n");
+	session->SendMessage(session->GetPlayer().BuildFactory() ? 
+		"Factory building started\n" : "Not enough money\n");
 }
-
 
 void Controller::TurnHandler()
 {
 	session->LoseTurn();
+
 	Node<Session> *tmp = sess_list;
-	while(tmp && &tmp->data != session) { 
+	while(tmp && &tmp->data != session) 
 		tmp = tmp->next; 
-	}
+
 	tmp->data.GetPlayer().UpdateFactories();
 	if(tmp->next)
 		tmp->next->data.TakeTurn();

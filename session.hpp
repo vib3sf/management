@@ -31,8 +31,17 @@ class Session {
 		void SendMessage(const char *str) const;
 		bool DoRead();
 		void Start();
-		inline void TakeTurn() { state = turn; };
-		inline void LoseTurn() { state = waiting_turn; }
+		inline void TakeTurn() 
+		{ 
+			state = turn; 
+			SendMessage("Your turn now\n"); 
+		};
+		inline void LoseTurn() 
+		{ 
+			state = waiting_turn; 
+			SendMessage("Turn ended\n");
+		}
+
 		inline int GetFd() const { return fd; };
 		inline bool IsReady() const { return state == waiting_start; };
 		inline bool HasTurn() const { return state == turn; }

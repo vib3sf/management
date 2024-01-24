@@ -7,24 +7,24 @@
 class Factory {
 	private:
 		int build_time;
-		bool is_used, is_opened;
+		bool is_used, is_open;
 		
 	public:
 		Factory(int build_time) : 
-			build_time(build_time), is_used(false), is_opened(false) {  }
+			build_time(build_time), is_used(false), is_open(false) {  }
 
 		inline bool IsUsed() { return is_used; }
 		inline void Block() { is_used = true; }
 		inline void Unblock() { is_used = false; }
 		inline void DecreaseBuildTime() { build_time--; }
 		inline bool IsBuilt() { return build_time == 0; }
-		inline bool IsOpened() { return is_opened; }
-		inline void Open() { is_opened = true; }
+		inline bool IsOpen() { return is_open; }
+		inline void Open() { is_open = true; }
 
 		static inline int FreeFactsCount(Node<Factory> *facts) 
 		{
 			return facts ? FreeFactsCount(facts->next) + 
-				facts->data.is_opened : 0; 
+				facts->data.is_open : 0; 
 		}
 };
 
