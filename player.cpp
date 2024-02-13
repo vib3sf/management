@@ -62,6 +62,9 @@ prod_results Player::CreateProduct(int count)
 
 bet_results Player::PlaceBet(Bank& bank, int value, int count, bet_types type)
 {
+	if(IsPlaced(type))
+		return already_placed_err;
+
 	switch(type)
 	{
 		case product:
@@ -69,22 +72,27 @@ bet_results Player::PlaceBet(Bank& bank, int value, int count, bet_types type)
 				return max_price_err;
 			if(count > products)
 				return no_product_err;
+
 			bank.AddProductBet(ProductBet(*this, value, count));
+			sell_placed = true;
 			break;
+
 		case material:
 			if(bank.GetMaterialMin() > value)
 				return min_price_err;
 			if(value * count > money)
 				return no_money_err;
+
 			bank.AddMaterialBet(MaterialBet(*this, value, count));
 			money -= value * count;
+			buy_placed = true;
 			break;
 	}
 
 	return success_bet;
 }
 
-void Player::UpdateFactories()
+void Player::Update()
 {
 	for(Node<Factory> *node = factories; node; node = node->next) {
 		Factory& fact = node->data;
@@ -96,5 +104,8 @@ void Player::UpdateFactories()
 			money -= 2500;
 		}
 	}
+
+	sell_placed = false;
+	buy_placed = false;
 }
 

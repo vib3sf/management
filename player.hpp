@@ -29,8 +29,11 @@ class Factory {
 		}
 };
 
-enum bet_results { 
-	success_bet, min_price_err, max_price_err, no_money_err, no_product_err};
+enum bet_results 
+{ 
+	success_bet, already_placed_err, 
+	min_price_err, max_price_err, no_money_err, no_product_err
+};
 
 enum prod_results {
 	success_prod, no_resources_err, no_factories_err };
@@ -42,6 +45,7 @@ class Player {
 		char *name;
 		int num, money, materials, products;
 		Node<Factory> *factories;
+		bool sell_placed, buy_placed;
 		
 	public:
 		Player();
@@ -53,6 +57,10 @@ class Player {
 		void ReduceProduct(int products) { this->products -= products; }
 		bet_results PlaceBet(Bank& bank, int value, int count, bet_types type);
 		inline int GetNum() const { return num; }
+		inline bool IsPlaced(bet_types type) 
+		{ 
+			return type == product ? sell_placed : buy_placed; 
+		}
 		inline void SetNum(int num) { this->num = num; }
 		inline const char *GetName() const { return name; }
 		inline void SetName(char *name) 
@@ -60,7 +68,7 @@ class Player {
 			this->name = new char[strlen(name) + 1];
 			strcpy(this->name, name); 
 		}
-		void UpdateFactories();
+		void Update();
 		
 		inline void GetInfo(char *buf) const
 		{

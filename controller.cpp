@@ -31,6 +31,7 @@ void Controller::Handle(char *line, Session& session)
 				((*this).*(h->method))();
 			return;
 		}
+
 	session.SendMessage("Wrong command\n");
 }
 
@@ -113,6 +114,9 @@ void Controller::PlaceBet(bet_types type)
 	bet_results res = session->GetPlayer().PlaceBet(bank, value, count, type);
 	char buf[32];
 	switch(res) {
+		case already_placed_err:
+			session->SendMessage("This type of bet has already been placed\n");
+			break;
 		case max_price_err:
 			sprintf(buf, "Max selling price is %d\n", bank.GetProductMax());
 			session->SendMessage(buf);
@@ -147,12 +151,13 @@ void Controller::TurnHandler()
 	while(tmp && &tmp->data != session) 
 		tmp = tmp->next; 
 
-	tmp->data.GetPlayer().UpdateFactories();
 	if(tmp->next)
 		tmp->next->data.TakeTurn();
 	else {
 		sess_list->data.TakeTurn();
 		bank.FinishMonth(Node<Session>::Len(sess_list));
+		for(Node<Session> *node = sess_list; node; node = node->next)
+			node->data.GetPlayer().Update();
 	}
 }
 
