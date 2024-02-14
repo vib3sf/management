@@ -11,16 +11,17 @@ class Factory {
 		bool is_used, is_open;
 		
 	public:
+		static const char *factory_info;
 		Factory(int n, int build_time) : 
 			n(n), build_time(build_time), is_used(false), is_open(false) {  }
 
-		inline int GetN() { return n; }
-		inline bool IsUsed() { return is_used; }
+		inline int GetN() const { return n; }
+		inline bool IsUsed() const { return is_used; }
 		inline void Block() { is_used = true; }
 		inline void Unblock() { is_used = false; }
 		inline void DecreaseBuildTime() { build_time--; }
-		inline bool IsBuilt() { return build_time == 0; }
-		inline bool IsOpen() { return is_open; }
+		inline bool IsBuilt() const { return build_time == 0; }
+		inline bool IsOpen() const { return is_open; }
 		inline void Open() { is_open = true; }
 
 		static inline int FreeFactsCount(Node<Factory> *facts) 
@@ -84,10 +85,21 @@ class Player {
 
 		inline void GetInfo(char *buf) const
 		{
-			sprintf(buf, player_msg,
-				num, name, 
-				money, Factory::FreeFactsCount(factories), 
-				materials, products);
+			int offset = sprintf(buf, player_msg,
+								num, name, 
+								money, materials, products);
+
+			for(const Node<Factory> *node = factories; node; node = node->next) {
+				const Factory& fact = node->data;
+				offset += sprintf(buf + offset, Factory::factory_info,
+								fact.GetN(), 
+								fact.IsBuilt(), fact.IsOpen(), fact.IsUsed());
+			}
+		}
+
+		inline int GetInfoSize() const 
+		{ 
+			return 128 + Node<Factory>::Len(factories) * 64;
 		}
 };
 

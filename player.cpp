@@ -3,8 +3,12 @@
 #include "stdio.h"
 
 const char *Player::player_msg = 
-	"#%d - %s: money  facts  mats  prod\n"
-	"%%%15d  %3d%7d%6d\n";
+	"#%d - %s: money  mats  prod\n"
+	"%%%15d%3d%6d\n";
+
+const char *Factory::factory_info = 
+	"%%%d - built  open  used\n"
+	"%%%15d%3d%6d\n";
 
 Player::Player() 
 	: name(0), money(10000), materials(4), products(2), factories(0)

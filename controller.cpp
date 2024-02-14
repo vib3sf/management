@@ -45,9 +45,10 @@ void Controller::MarketHandler()
 
 void Controller::InfoHandler()
 {
-	char info[128];
+	char *info = new char[session->GetPlayer().GetInfoSize()];
 	session->GetPlayer().GetInfo(info);
 	session->SendMessage(info);
+	delete[] info;
 }
 
 void Controller::PlayerHandler()
@@ -64,9 +65,10 @@ void Controller::PlayerHandler()
 
 	if(node)
 	{
-		char info[128];
+		char *info = new char[session->GetPlayer().GetInfoSize()];
 		node->data.GetPlayer().GetInfo(info);
 		session->SendMessage(info);
+		delete[] info;
 	}
 	else
 		session->SendMessage("Player num doesn't exist.\n");
@@ -184,7 +186,7 @@ void Controller::TurnHandler()
 	else {
 		sess_list->data.TakeTurn();
 		bank.FinishMonth(Node<Session>::Len(sess_list));
-		for(Node<Session> *node = sess_list; node; node = node->next){
+		for(Node<Session> *node = sess_list; node; node = node->next) {
 			Player& player = node->data.GetPlayer();
 			player.Update();
 			if(player.IsBankrupt())
@@ -192,6 +194,10 @@ void Controller::TurnHandler()
 				session->SendMessage("You are bankrupt\nGame over\n");
 				Node<Session>::Remove(node, sess_list);
 			}
+		}
+		if(Node<Session>::Len(sess_list) == 1) {
+			sess_list->data.SendMessage("You won\n");
+			exit(0);
 		}
 	}
 }
