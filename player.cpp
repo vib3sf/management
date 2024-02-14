@@ -10,7 +10,7 @@ Player::Player()
 	: name(0), money(10000), materials(4), products(2), factories(0)
 {  
 	for(int i = 0; i < 2; i++) {
-		Factory fact(0);
+		Factory fact(i, 0);
 		fact.Open();
 		Node<Factory>::Append(fact, factories);
 	}
@@ -22,9 +22,41 @@ bool Player::BuildFactory()
 		return false;
 
 	money -= 2500;
-	Factory fact(5);
+	Factory fact(Node<Factory>::Len(factories), 5);
 	Node<Factory>::Append(fact, factories);
 	return true;
+}
+
+bool Player::FindFactory(int n, Factory *&fact)
+{
+	Node<Factory> *tmp = factories;
+	for(tmp = tmp; tmp && tmp->data.GetN() != n; tmp = tmp->next) 
+	{  }
+		
+	if(tmp)
+		fact = &tmp->data;
+
+	return tmp;
+}
+
+openfact_results Player::OpenFactory(int n)
+{
+	if(money < 2500)
+		return no_money_open_err;
+	
+	Factory *fact;
+	if(!FindFactory(n, fact))
+		return wrong_fact_err;
+
+	if(!fact->IsBuilt())
+		return no_built_err;
+
+	if(fact->IsOpen())
+		return already_open_err;
+	
+	fact->Open();
+	money -= 2500;
+	return success_open;
 }
 
 prod_results Player::CreateProduct(int count)
@@ -81,7 +113,7 @@ bet_results Player::PlaceBet(Bank& bank, int value, int count, bet_types type)
 			if(bank.GetMaterialMin() > value)
 				return min_price_err;
 			if(value * count > money)
-				return no_money_err;
+				return no_money_bet_err;
 
 			bank.AddMaterialBet(MaterialBet(*this, value, count));
 			money -= value * count;
@@ -97,13 +129,16 @@ void Player::Update()
 	for(Node<Factory> *node = factories; node; node = node->next) {
 		Factory& fact = node->data;
 		fact.Unblock();
+
 		if(!fact.IsBuilt())
 			fact.DecreaseBuildTime();
-		else if(!fact.IsOpen() && money >= 2500) {
-			fact.Open();
-			money -= 2500;
-		}
 	}
+
+	money -= (
+			300 * materials + 
+			500 * products + 
+			1000 * Node<Factory>::Len(factories)
+			);
 
 	sell_placed = false;
 	buy_placed = false;

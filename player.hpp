@@ -7,13 +7,14 @@
 
 class Factory {
 	private:
-		int build_time;
+		int n, build_time;
 		bool is_used, is_open;
 		
 	public:
-		Factory(int build_time) : 
-			build_time(build_time), is_used(false), is_open(false) {  }
+		Factory(int n, int build_time) : 
+			n(n), build_time(build_time), is_used(false), is_open(false) {  }
 
+		inline int GetN() { return n; }
 		inline bool IsUsed() { return is_used; }
 		inline void Block() { is_used = true; }
 		inline void Unblock() { is_used = false; }
@@ -32,11 +33,19 @@ class Factory {
 enum bet_results 
 { 
 	success_bet, already_placed_err, 
-	min_price_err, max_price_err, no_money_err, no_product_err
+	min_price_err, max_price_err, no_money_bet_err, no_product_err
 };
 
-enum prod_results {
-	success_prod, no_resources_err, no_factories_err };
+enum prod_results 
+{
+	success_prod, no_resources_err, no_factories_err 
+};
+
+enum openfact_results
+{
+	success_open, no_money_open_err, 
+	wrong_fact_err, no_built_err, already_open_err
+};
 
 class Player {
 	private:
@@ -51,6 +60,8 @@ class Player {
 		Player();
 
 		bool BuildFactory();
+		bool FindFactory(int n, Factory *&fact);
+		openfact_results OpenFactory(int n);
 		prod_results CreateProduct(int count);
 		inline void AddMoney(int money) { this->money += money; }
 		void AddMaterial(int materials) { this->materials += materials; }
@@ -61,6 +72,7 @@ class Player {
 		{ 
 			return type == product ? sell_placed : buy_placed; 
 		}
+		inline bool IsBankrupt() { return money < 0; }
 		inline void SetNum(int num) { this->num = num; }
 		inline const char *GetName() const { return name; }
 		inline void SetName(char *name) 
@@ -69,7 +81,7 @@ class Player {
 			strcpy(this->name, name); 
 		}
 		void Update();
-		
+
 		inline void GetInfo(char *buf) const
 		{
 			sprintf(buf, player_msg,

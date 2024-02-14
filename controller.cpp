@@ -11,6 +11,7 @@ const Handler Controller::handlers[] = {
 	{ "buy", 	&Controller::BuyHandler,	true  	},
 	{ "sell", 	&Controller::SellHandler,	true	},
 	{ "build", 	&Controller::BuildHandler, 	true	},
+	{ "open",	&Controller::OpenHandler,	true	},
 	{ "turn", 	&Controller::TurnHandler, 	true	},
 	0
 };
@@ -115,6 +116,7 @@ void Controller::PlaceBet(bet_types type)
 	char buf[32];
 	switch(res) {
 		case already_placed_err:
+			void OpenHandler();
 			session->SendMessage("This type of bet has already been placed\n");
 			break;
 		case max_price_err:
@@ -125,7 +127,7 @@ void Controller::PlaceBet(bet_types type)
 			sprintf(buf, "Min buying price is %d\n", bank.GetMaterialMin());
 			session->SendMessage(buf);
 			break;
-		case no_money_err:
+		case no_money_bet_err:
 			session->SendMessage("Not enough money for buying\n");
 			break;
 		case no_product_err:
@@ -143,6 +145,32 @@ void Controller::BuildHandler()
 		"Factory building started\n" : "Not enough money\n");
 }
 
+void Controller::OpenHandler()
+{
+	int num;
+	if(!(ArgcCheck("Usage: open <int:num>\n", 2) && 
+			NumCheck("Invalid factory\n", 1, num)))
+		return;
+
+	switch(session->GetPlayer().OpenFactory(num)) {
+		case success_open:
+			session->SendMessage("Factory is open\n");
+			break;
+		case no_money_open_err:
+			session->SendMessage("Not enough money for opening\n");
+			break;
+		case wrong_fact_err:
+			session->SendMessage("Wrong factory\n");
+			break;
+		case no_built_err:
+			session->SendMessage("Factory is not been built\n");
+			break;
+		case already_open_err:
+			session->SendMessage("Factory is open yet\n");
+			break;
+	}
+}
+
 void Controller::TurnHandler()
 {
 	session->LoseTurn();
@@ -156,8 +184,15 @@ void Controller::TurnHandler()
 	else {
 		sess_list->data.TakeTurn();
 		bank.FinishMonth(Node<Session>::Len(sess_list));
-		for(Node<Session> *node = sess_list; node; node = node->next)
-			node->data.GetPlayer().Update();
+		for(Node<Session> *node = sess_list; node; node = node->next){
+			Player& player = node->data.GetPlayer();
+			player.Update();
+			if(player.IsBankrupt())
+			{
+				session->SendMessage("You are bankrupt\nGame over\n");
+				Node<Session>::Remove(node, sess_list);
+			}
+		}
 	}
 }
 

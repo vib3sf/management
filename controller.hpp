@@ -29,6 +29,7 @@ class Controller
 		void BuyHandler();
 		void SellHandler();
 		void BuildHandler();
+		void OpenHandler();
 		void TurnHandler();
 
 		static const Handler handlers[];
