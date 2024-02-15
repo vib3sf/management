@@ -56,11 +56,12 @@ void Controller::PlayerHandler()
 	if(!ArgcCheck("Usage: player <int:num>\n", 2)) 
 		return;
 
-	int num = str_to_int(argv[1], num);
+	int num;
+	str_to_int(argv[1], num);
 	Node<Session> *node = sess_list;
-	const Player& player = node->data.GetPlayer(); 
 
-	while(node && player.GetNum() != num && strcmp(argv[1], player.GetName()))
+	while(node && node->data.GetPlayer().GetNum() != num 
+			&& strcmp(node->data.GetPlayer().GetName(), argv[1]))
 		node = node->next;
 
 	if(node)
@@ -71,7 +72,7 @@ void Controller::PlayerHandler()
 		delete[] info;
 	}
 	else
-		session->SendMessage("Player num doesn't exist.\n");
+		session->SendMessage("Player doesn't exist.\n");
 }
 
 void Controller::ProdHandler()
@@ -189,16 +190,23 @@ void Controller::TurnHandler()
 		for(Node<Session> *node = sess_list; node; node = node->next) {
 			Player& player = node->data.GetPlayer();
 			player.Update();
-			if(player.IsBankrupt())
-			{
-				session->SendMessage("You are bankrupt\nGame over\n");
-				Node<Session>::Remove(node, sess_list);
+
+			if(player.IsBankrupt()) {
+				RemovePlayer(node);
 			}
 		}
-		if(Node<Session>::Len(sess_list) == 1) {
-			sess_list->data.SendMessage("You won\n");
-			exit(0);
-		}
+	}
+}
+
+void Controller::RemovePlayer(Node<Session> *node)
+{
+	node->data.SendMessage("You are bankrupt\n");
+	Node<Session>::Remove(node, sess_list);
+
+	if(Node<Session>::Len(sess_list) == 1) {
+		sess_list->data.SendMessage(!sess_list->data.GetPlayer().IsBankrupt() ? 
+				"You won\n" : "You are bankrupt\n");
+		exit(0);
 	}
 }
 
